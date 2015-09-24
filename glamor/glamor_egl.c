@@ -809,6 +809,11 @@ glamor_egl_init(ScrnInfoPtr scrn, int fd)
         xf86GlamorEGLPrivateIndex = xf86AllocateScrnInfoPrivateIndex();
 
     scrn->privates[xf86GlamorEGLPrivateIndex].ptr = glamor_egl;
+
+
+    fd = open("/dev/dri/renderD128", O_RDWR);
+    xf86Msg(X_INFO, "Opening render node: %d\n", fd);
+
     glamor_egl->fd = fd;
 #ifdef GLAMOR_HAS_GBM
     glamor_egl->gbm = gbm_create_device(glamor_egl->fd);

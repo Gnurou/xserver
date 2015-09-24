@@ -50,6 +50,8 @@
 
 #include "driver.h"
 
+#include <tegra_drm.h>
+
 static Bool drmmode_xf86crtc_resize(ScrnInfoPtr scrn, int width, int height);
 
 static Bool
@@ -160,15 +162,61 @@ drmmode_bo_map(drmmode_ptr drmmode, drmmode_bo *bo)
 }
 
 static Bool
+drmmode_tegra_import(drmmode_ptr drmmode, drmmode_bo *bo)
+{
+	struct drm_tegra_gem_set_tiling args;
+	int err;
+
+	memset(&args, 0, sizeof(args));
+	args.handle = bo->drm_handle;
+	args.mode = DRM_TEGRA_GEM_TILING_MODE_BLOCK;
+	args.value = 4;
+
+	err = ioctl(drmmode->fd, DRM_IOCTL_TEGRA_GEM_SET_TILING, &args);
+	if (err < 0) {
+		xf86Msg(X_ERROR, "failed to set tiling parameters\n");
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+static Bool
 drmmode_create_bo(drmmode_ptr drmmode, drmmode_bo *bo,
                   unsigned width, unsigned height, unsigned bpp)
 {
 #ifdef GLAMOR_HAS_GBM
+    uint32_t handle;
+    int fd;
+    int ret;
+
     if (drmmode->glamor) {
         bo->gbm = gbm_bo_create(drmmode->gbm, width, height,
                                 GBM_FORMAT_ARGB8888,
                                 GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT);
-        return bo->gbm != NULL;
+
+	if (bo->gbm == NULL)
+		return FALSE;
+
+	handle = gbm_bo_get_handle(bo->gbm).u32;
+
+	ret = drmPrimeHandleToFD(gbm_device_get_fd(drmmode->gbm), handle, 0, &fd);
+	if (ret) {
+		xf86Msg(X_ERROR, "failed to export bo\n");
+		return FALSE;
+	}
+
+	ret = drmPrimeFDToHandle(drmmode->fd, fd, &handle);
+	if (ret) {
+		xf86Msg(X_ERROR, "failed to import bo\n");
+		close(fd);
+		return FALSE;
+	}
+
+	close(fd);
+	bo->drm_handle = handle;
+
+	return drmmode_tegra_import(drmmode, bo);
     }
 #endif
 
@@ -410,7 +458,7 @@ drmmode_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode,
                                pScrn->virtualX, pScrn->virtualY,
                                pScrn->depth, drmmode->kbpp,
                                drmmode_bo_get_pitch(&drmmode->front_bo),
-                               drmmode_bo_get_handle(&drmmode->front_bo),
+                               drmmode->front_bo.drm_handle,
                                &drmmode->fb_id);
             if (ret < 0) {
                 ErrorF("failed to add fb %d\n", ret);
@@ -712,7 +760,7 @@ drmmode_shadow_allocate(xf86CrtcPtr crtc, int width, int height)
     ret = drmModeAddFB(drmmode->fd, width, height, crtc->scrn->depth,
                        drmmode->kbpp,
                        drmmode_bo_get_pitch(&drmmode_crtc->rotate_bo),
-                       drmmode_bo_get_handle(&drmmode_crtc->rotate_bo),
+                       drmmode_crtc->rotate_bo.drm_handle,
                        &drmmode_crtc->rotate_fb_id);
 
     if (ret) {
@@ -1700,7 +1748,7 @@ drmmode_xf86crtc_resize(ScrnInfoPtr scrn, int width, int height)
 
     ret = drmModeAddFB(drmmode->fd, width, height, scrn->depth,
                        scrn->bitsPerPixel, pitch,
-                       drmmode_bo_get_handle(&drmmode->front_bo),
+                       drmmode->front_bo.drm_handle,
                        &drmmode->fb_id);
     if (ret)
         goto fail;

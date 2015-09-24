@@ -41,6 +41,7 @@ typedef struct {
 #ifdef GLAMOR_HAS_GBM
     struct gbm_bo *gbm;
 #endif
+    uint32_t drm_handle;
 } drmmode_bo;
 
 typedef struct {
