@@ -1334,8 +1334,11 @@ DRI2Connect(ClientPtr client, ScreenPtr pScreen,
         return FALSE;
 
     *driverName = ds->driverNames[driver_id];
-    *deviceName = ds->deviceName;
+    //*deviceName = ds->deviceName;
+    *deviceName = "/dev/dri/renderD128";
     *fd = ds->fd;
+
+    xf86Msg(X_INFO, "%s: %s %s %d\n", __func__, *driverName, *deviceName, *fd);
 
     if (client) {
         DRI2ClientPtr dri2_client;

@@ -724,6 +724,7 @@ glamor_egl_screen_init(ScreenPtr screen, struct glamor_context *glamor_ctx)
     glamor_ctx->make_current = glamor_egl_make_current;
 
 #ifdef DRI3
+    xf86Msg(X_INFO, "DRI3 capable: %d\n", glamor_egl->dri3_capable);
     if (glamor_egl->dri3_capable) {
     	glamor_screen_private *glamor_priv = glamor_get_screen_private(screen);
         /* Tell the core that we have the interfaces for import/export
@@ -740,7 +741,9 @@ glamor_egl_screen_init(ScreenPtr screen, struct glamor_context *glamor_ctx)
             /* To do DRI3 device FD generation, we need to open a new fd
              * to the same device we were handed in originally.
              */
-            glamor_egl->device_path = drmGetDeviceNameFromFd(glamor_egl->fd);
+            //glamor_egl->device_path = drmGetDeviceNameFromFd(glamor_egl->fd);
+            glamor_egl->device_path = "/dev/dri/renderD128";
+	    xf86Msg(X_INFO, "DRI3 device name: %s %d\n", glamor_egl->device_path, glamor_egl->fd);
 
             if (!dri3_screen_init(screen, &glamor_dri3_info)) {
                 xf86DrvMsg(scrn->scrnIndex, X_ERROR,

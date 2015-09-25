@@ -831,9 +831,10 @@ ms_dri2_screen_init(ScreenPtr screen)
     }
 
     memset(&info, '\0', sizeof(info));
-    info.fd = ms->fd;
+    info.fd = gbm_device_get_fd(ms->drmmode.gbm);
+    //info.fd = ms->fd;
     info.driverName = NULL; /* Compat field, unused. */
-    info.deviceName = drmGetDeviceNameFromFd(ms->fd);
+    info.deviceName = drmGetDeviceNameFromFd(info.fd);
 
     info.version = 4;
     info.CreateBuffer = ms_dri2_create_buffer;
