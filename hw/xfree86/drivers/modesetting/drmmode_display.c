@@ -41,6 +41,8 @@
 #include "xf86DDC.h"
 
 #include <xf86drm.h>
+#include <drm_mode.h>
+#include <drm_fourcc.h>
 #include "xf86Crtc.h"
 #include "drmmode_display.h"
 
@@ -432,12 +434,15 @@ drmmode_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode,
         }
 
         if (fb_id == 0) {
-            ret = drmModeAddFB(drmmode->fd,
-                               pScrn->virtualX, pScrn->virtualY,
-                               pScrn->depth, drmmode->kbpp,
-                               drmmode_bo_get_pitch(&drmmode->front_bo),
-                               drmmode->front_bo.drm_handle,
-                               &drmmode->fb_id);
+	    uint32_t handles[4] = { 0 }, pitches[4] = { 0 }, offsets[4] = { 0 };
+	    uint64_t modifier[4] = { 0 };
+	    pitches[0] = drmmode_bo_get_pitch(&drmmode->front_bo);
+	    handles[0] = drmmode->front_bo.drm_handle;
+	    modifier[0] = NV_FORMAT_MOD_TEGRA_BLOCK(4);
+	    ret = drmModeAddFB2WithModifiers(drmmode->fd, pScrn->virtualX, pScrn->virtualY,
+				 DRM_FORMAT_XRGB8888, handles, pitches, offsets,
+				 modifier, &drmmode->fb_id,
+				 DRM_MODE_FB_MODIFIERS);
             if (ret < 0) {
                 ErrorF("failed to add fb %d\n", ret);
                 ret = FALSE;
