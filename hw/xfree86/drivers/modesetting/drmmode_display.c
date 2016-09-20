@@ -195,9 +195,11 @@ drmmode_create_bo(drmmode_ptr drmmode, drmmode_bo *bo,
 
 	close(fd);
 	bo->drm_handle = handle;
-
-	return TRUE;
+    } else {
+	bo->drm_handle = gbm_bo_get_handle(bo->gbm).u32;
     }
+
+    return TRUE;
 #endif
 
     bo->dumb = dumb_bo_create(drmmode->fd, width, height, bpp);
