@@ -731,6 +731,8 @@ drmmode_shadow_allocate(xf86CrtcPtr crtc, int width, int height)
 {
     drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
     drmmode_ptr drmmode = drmmode_crtc->drmmode;
+    uint32_t handles[4] = { 0 }, pitches[4] = { 0 }, offsets[4] = { 0 };
+    uint64_t modifier[4] = { 0 };
     int ret;
 
     if (!drmmode_create_bo(drmmode, &drmmode_crtc->rotate_bo,
@@ -740,11 +742,12 @@ drmmode_shadow_allocate(xf86CrtcPtr crtc, int width, int height)
         return NULL;
     }
 
-    ret = drmModeAddFB(drmmode->fd, width, height, crtc->scrn->depth,
-                       drmmode->kbpp,
-                       drmmode_bo_get_pitch(&drmmode_crtc->rotate_bo),
-                       drmmode_crtc->rotate_bo.drm_handle,
-                       &drmmode_crtc->rotate_fb_id);
+    pitches[0] = drmmode_bo_get_pitch(&drmmode_crtc->rotate_bo);
+    handles[0] = drmmode_crtc->rotate_bo.drm_handle;
+    modifier[0] = NV_FORMAT_MOD_TEGRA_BLOCK(4);
+    ret = drmModeAddFB2WithModifiers(drmmode->fd, width, height, DRM_FORMAT_XRGB8888,
+			 handles, pitches, offsets, modifier,
+                         &drmmode_crtc->rotate_fb_id, DRM_MODE_FB_MODIFIERS);
 
     if (ret) {
         ErrorF("failed to add rotate fb\n");
