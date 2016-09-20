@@ -1700,6 +1700,8 @@ drmmode_xf86crtc_resize(ScrnInfoPtr scrn, int width, int height)
     ScreenPtr screen = xf86ScrnToScreen(scrn);
     uint32_t old_fb_id;
     int i, pitch, old_width, old_height, old_pitch;
+    uint32_t handles[4] = { 0 }, pitches[4] = { 0 }, offsets[4] = { 0 };
+    uint64_t modifier[4] = { 0 };
     int cpp = (scrn->bitsPerPixel + 7) / 8;
     int kcpp = (drmmode->kbpp + 7) / 8;
     PixmapPtr ppix = screen->GetScreenPixmap(screen);
@@ -1732,10 +1734,12 @@ drmmode_xf86crtc_resize(ScrnInfoPtr scrn, int width, int height)
     scrn->virtualY = height;
     scrn->displayWidth = pitch / kcpp;
 
-    ret = drmModeAddFB(drmmode->fd, width, height, scrn->depth,
-                       scrn->bitsPerPixel, pitch,
-                       drmmode->front_bo.drm_handle,
-                       &drmmode->fb_id);
+    pitches[0] = pitch;
+    handles[0] = drmmode->front_bo.drm_handle;
+    modifier[0] = NV_FORMAT_MOD_TEGRA_BLOCK(4);
+    ret = drmModeAddFB2WithModifiers(drmmode->fd, width, height, DRM_FORMAT_XRGB8888,
+			handles, pitches, offsets, modifier,
+                        &drmmode->fb_id, DRM_MODE_FB_MODIFIERS);
     if (ret)
         goto fail;
 
