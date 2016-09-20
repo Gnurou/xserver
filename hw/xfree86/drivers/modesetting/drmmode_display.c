@@ -50,8 +50,6 @@
 
 #include "driver.h"
 
-#include <tegra_drm.h>
-
 static Bool drmmode_xf86crtc_resize(ScrnInfoPtr scrn, int width, int height);
 
 static Bool
@@ -162,26 +160,6 @@ drmmode_bo_map(drmmode_ptr drmmode, drmmode_bo *bo)
 }
 
 static Bool
-drmmode_tegra_import(drmmode_ptr drmmode, drmmode_bo *bo)
-{
-	struct drm_tegra_gem_set_tiling args;
-	int err;
-
-	memset(&args, 0, sizeof(args));
-	args.handle = bo->drm_handle;
-	args.mode = DRM_TEGRA_GEM_TILING_MODE_BLOCK;
-	args.value = 4;
-
-	err = ioctl(drmmode->fd, DRM_IOCTL_TEGRA_GEM_SET_TILING, &args);
-	if (err < 0) {
-		xf86Msg(X_ERROR, "failed to set tiling parameters\n");
-		return FALSE;
-	}
-
-	return TRUE;
-}
-
-static Bool
 drmmode_create_bo(drmmode_ptr drmmode, drmmode_bo *bo,
                   unsigned width, unsigned height, unsigned bpp)
 {
@@ -216,7 +194,7 @@ drmmode_create_bo(drmmode_ptr drmmode, drmmode_bo *bo,
 	close(fd);
 	bo->drm_handle = handle;
 
-	return drmmode_tegra_import(drmmode, bo);
+	return TRUE;
     }
 #endif
 
